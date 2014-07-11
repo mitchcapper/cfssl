@@ -5,6 +5,24 @@ CF-SSL is CloudFlare's SSL swiss army knife. It is both a command line
 tool and an HTTP API server for signing, verifying, and bundling SSL
 certificates. It requires Go 1.3 to build.
 
+## Installation
+
+### Mac OS X / Homebrew
+
+If you're on OS X and want to use homebrew, use our custom tap:
+
+```
+brew tap cloudflare/cloudflare
+brew install cloudflare
+```
+
+### go get
+
+If you want to go the Go way (install in GOPATH/bin) and just want the command:
+
+```
+go get github.com/cloudflare/cfssl
+```
 
 ### Using the Command Line Tool
 
