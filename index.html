@@ -1,0 +1,352 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>CFSSL by cloudflare</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>CFSSL</h1>
+        <p>CFSSL: CloudFlare&#39;s PKI toolkit</p>
+
+        <p class="view"><a href="https://github.com/cloudflare/cfssl">View the Project on GitHub <small>cloudflare/cfssl</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/cloudflare/cfssl/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/cloudflare/cfssl/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/cloudflare/cfssl">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a id="cfssl" class="anchor" href="#cfssl" aria-hidden="true"><span class="octicon octicon-link"></span></a>CFSSL</h1>
+
+<p><a href="https://godoc.org/github.com/cloudflare/cfssl"><img src="https://godoc.org/github.com/cloudflare/cfssl?status.png" alt="GoDoc"></a></p>
+
+<h2>
+<a id="cloudflares-ssl-tool" class="anchor" href="#cloudflares-ssl-tool" aria-hidden="true"><span class="octicon octicon-link"></span></a>CloudFlare's SSL tool</h2>
+
+<p>CFSSL is CloudFlare's SSL swiss army knife. It is both a command line
+tool and an HTTP API server for signing, verifying, and bundling SSL
+certificates. It requires Go 1.4 to build.</p>
+
+<h3>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installation</h3>
+
+<p>Installation requires a <a href="http://golang.org/doc/install">working Go
+installation</a> and a properly set <code>GOPATH</code>.</p>
+
+<pre><code>$ go get -u github.com/cloudflare/cfssl/cmd/cfssl
+</code></pre>
+
+<p>will download and build the CFSSL tool, installing it in
+<code>$GOPATH/bin/cfssl</code>. To install the other utility programs that are in
+this repo:</p>
+
+<pre><code>$ go get -u github.com/cloudflare/cfssl/cmd/...
+</code></pre>
+
+<p>This will download, build, and install <code>cfssl</code>, <code>cfssljson</code>, and
+<code>mkbundle</code> into <code>$GOPATH/bin/</code>.</p>
+
+<h3>
+<a id="using-the-command-line-tool" class="anchor" href="#using-the-command-line-tool" aria-hidden="true"><span class="octicon octicon-link"></span></a>Using the Command Line Tool</h3>
+
+<p>The command line tool takes a command to specify what operation it
+should carry out:</p>
+
+<pre><code>   sign             signs a certificate
+   bundle           build a certificate bundle
+   genkey           generate a private key and a certificate request
+   gencert          generate a private key and a certificate
+   serve            start the API server
+   version          prints out the current version
+   selfsign         generates a self-signed certificate
+</code></pre>
+
+<p>Use "cfssl [command] -help" to find out more about a command.
+The version command takes no arguments.</p>
+
+<h4>
+<a id="signing" class="anchor" href="#signing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Signing</h4>
+
+<pre><code>cfssl sign [-ca cert] [-ca-key key] hostname csr [subject]
+</code></pre>
+
+<p>The hostname and csr are the client's host name and certificate
+request. The <code>-ca</code> and <code>-ca-key</code> flags are the CA's certificate
+and private key, respectively. By default, they are "ca.pem" and
+"ca_key.pem".  For example, assuming the CA's private key is in
+<code>/etc/ssl/private/cfssl_key.pem</code> and the CA's certificate is in
+<code>/etc/ssl/certs/cfssl.pem</code>, to sign the <code>cloudflare.pem</code> certificate
+for cloudflare.com:</p>
+
+<pre><code>cfssl sign -ca /etc/ssl/certs/cfssl.pem \
+           -ca-key /etc/ssl/private/cfssl_key.pem \
+           cloudflare.com ./cloudflare.pem
+</code></pre>
+
+<p>It is also possible to specify hostname and clientcert through '-hostname'
+and '-cert' flags. By doing so, flag values take precedence and will
+overwrite the arguments.</p>
+
+<p>The subject is an optional file that contains subject information that
+should be used in place of the information from the CSR. It should be
+a JSON file with the type:</p>
+
+<pre><code>{
+    "hosts": [
+        "example.com",
+        "www.example.com"
+    ],
+    "CN": "example.com",
+    "names": [
+        {
+            "C": "US",
+            "L": "San Francisco",
+            "O": "Internet Widgets, Inc.",
+            "OU": "WWW",
+            "ST": "California"
+        }
+    ]
+}
+</code></pre>
+
+<h4>
+<a id="bundling" class="anchor" href="#bundling" aria-hidden="true"><span class="octicon octicon-link"></span></a>Bundling</h4>
+
+<pre><code>cfssl bundle [-ca-bundle bundle] [-int-bundle bundle] \
+             [-metadata metadata_file] [-flavor bundle_flavor] \
+             -cert certificate_file [-key key_file]
+</code></pre>
+
+<p>The bundles are used for the root and intermediate certificate
+pools. In addition, platform metadata is specified through '-metadata'
+The bundle files, metadata file (and auxiliary files) can be
+found at <a href="https://github.com/cloudflare/cfssl_trust">cfssl_trust</a></p>
+
+<p>Specify PEM-encoded client certificate and key through '-cert' and
+'-key' respectively. If key is specified, the bundle will be built
+and verified with the key. Otherwise the bundle will be built
+without a private key. Instead of file path, use '-' for reading
+certificate PEM from stdin. It is also acceptable the certificate
+file contains a (partial) certificate bundle.</p>
+
+<p>Specify bundling flavor through '-flavor'. There are three flavors:
+'optimal' to generate a bundle of shortest chain and most advanced
+cryptographic algorithms, 'ubiquitous' to generate a bundle of most
+widely acceptance across different browsers and OS platforms, and
+'force' to find an acceptable bundle which is identical to the
+content of the input certificate file.</p>
+
+<p>Alternatively, the client certificate can be pulled directly from
+a domain. It is also possible to connect to the remote address
+through '-ip'.</p>
+
+<pre><code>cfssl bundle [-ca-bundle bundle] [-int-bundle bundle] \
+             [-metadata metadata_file] [-flavor bundle_flavor] \
+             -domain domain_name [-ip ip_address]
+</code></pre>
+
+<p>The bundle output form should follow the example</p>
+
+<pre><code>{
+    "bundle": "CERT_BUNDLE_IN_PEM",
+    "crt": "LEAF_CERT_IN_PEM",
+    "crl_support": true,
+    "expires": "2015-12-31T23:59:59Z",
+    "hostnames": ["example.com"],
+    "issuer": "ISSUER CERT SUBJECT",
+    "key": "KEY_IN_PEM",
+    "key_size": 2048,
+    "key_type": "2048-bit RSA",
+    "ocsp": ["http://ocsp.example-ca.com"],
+    "ocsp_support": true,
+    "root": "ROOT_CA_CERT_IN_PEM",
+    "signature": "SHA1WithRSA",
+    "subject": "LEAF CERT SUBJECT",
+    "status": {
+        "rebundled": false,
+        "expiring_SKIs": [],
+        "untrusted_root_stores": [],
+        "messages": [],
+        "code": 0
+    }
+}
+</code></pre>
+
+<h4>
+<a id="generating-certificate-signing-request-and-private-key" class="anchor" href="#generating-certificate-signing-request-and-private-key" aria-hidden="true"><span class="octicon octicon-link"></span></a>Generating certificate signing request and private key</h4>
+
+<pre><code>cfssl genkey csrjson
+</code></pre>
+
+<p>To generate a private key and corresponding certificate request, specify
+the key request as a JSON file. This file should follow the form</p>
+
+<pre><code>{
+    "hosts": [
+        "example.com",
+        "www.example.com"
+    ],
+    "key": {
+        "algo": "rsa",
+        "size": 2048
+    },
+    "names": [
+        {
+            "C": "US",
+            "L": "San Francisco",
+            "O": "Internet Widgets, Inc.",
+            "OU": "WWW",
+            "ST": "California"
+        }
+    ]
+}
+</code></pre>
+
+<h4>
+<a id="generating-self-signed-root-ca-certificate-and-private-key" class="anchor" href="#generating-self-signed-root-ca-certificate-and-private-key" aria-hidden="true"><span class="octicon octicon-link"></span></a>Generating self-signed root CA certificate and private key</h4>
+
+<pre><code>cfssl genkey -initca csrjson | cfssljson -bare ca
+</code></pre>
+
+<p>To generate a self-signed root CA certificate, specify the key request as
+the JSON file in the same format as in 'genkey'. Three PEM-encoded entities
+will appear in the output: the private key, the csr, and the self-signed
+certificate.</p>
+
+<h4>
+<a id="generating-a-remote-issued-certificate-and-private-key" class="anchor" href="#generating-a-remote-issued-certificate-and-private-key" aria-hidden="true"><span class="octicon octicon-link"></span></a>Generating a remote-issued certificate and private key.</h4>
+
+<pre><code>cfssl gencert -remote=remote_server hostname csrjson
+</code></pre>
+
+<p>This is calls genkey, but has a remote CFSSL server sign and issue
+a certificate.</p>
+
+<h4>
+<a id="generating-a-local-issued-certificate-and-private-key" class="anchor" href="#generating-a-local-issued-certificate-and-private-key" aria-hidden="true"><span class="octicon octicon-link"></span></a>Generating a local-issued certificate and private key.</h4>
+
+<pre><code>cfssl gencert -ca cert -ca-key key hostname csrjson
+</code></pre>
+
+<p>This is generates and issues a certificate and private key from a local CA
+via a JSON request.</p>
+
+<h3>
+<a id="starting-the-api-server" class="anchor" href="#starting-the-api-server" aria-hidden="true"><span class="octicon octicon-link"></span></a>Starting the API Server</h3>
+
+<p>CFSSL comes with an HTTP-based API server; the endpoints are
+documented in <code>doc/api.txt</code>. The server is started with the "serve"
+command:</p>
+
+<pre><code>cfssl serve [-address address] [-ca cert] [-ca-bundle bundle] \
+            [-ca-key key] [-int-bundle bundle] [-port port]   \
+            [-remote remote_server]
+</code></pre>
+
+<p>Address and port default to "127.0.0.1:8888". The <code>-ca</code> and <code>-ca-key</code>
+arguments should be the PEM-encoded certificate and private key to use
+for signing; by default, they are "ca.pem" and "ca_key.pem". The
+<code>-ca-bundle</code> and <code>-int-bundle</code> should be the certificate bundles used
+for the root and intermediate certificate pools, respectively. These
+default to "ca-bundle.crt" and "int-bundle." If the "remote" option is
+provided, all signature operations will be forwarded to the remote CFSSL.</p>
+
+<p>The amount of logging can be controlled with the <code>-loglevel</code> option. This
+comes <em>before</em> the serve command:</p>
+
+<pre><code>cfssl -loglevel 2 serve
+</code></pre>
+
+<p>The levels are:</p>
+
+<ul>
+<li>0. DEBUG</li>
+<li>1. INFO (this is the default level)</li>
+<li>2. WARNING</li>
+<li>3. ERROR</li>
+<li>4. CRITICAL</li>
+</ul>
+
+<h3>
+<a id="the-mkbundle-utility" class="anchor" href="#the-mkbundle-utility" aria-hidden="true"><span class="octicon octicon-link"></span></a>The mkbundle Utility</h3>
+
+<p><code>mkbundle</code> is used to build the root and intermediate bundles used in
+verifying certificates. It can be installed with</p>
+
+<pre><code>go get -u github.com/cloudflare/cfssl/cmd/mkbundle
+</code></pre>
+
+<p>It takes a collection of certificates, checks for CRL revocation (OCSP
+support is planned for the next release) and expired certificates, and
+bundles them into one file. It takes directories of certificates and
+certificate files (which may contain multiple certificates). For example,
+if the directory <code>intermediates</code> contains a number of intermediate
+certificates,</p>
+
+<pre><code>mkbundle -f int-bundle.crt intermediates
+</code></pre>
+
+<p>will check those certificates and combine valid ones into a single
+<code>int-bundle.crt</code> file.</p>
+
+<p>The <code>-f</code> flag specifies an output name; <code>-loglevel</code> specifies the verbosity
+of the logging (using the same loglevels above), and <code>-nw</code> controls the
+number of revocation-checking workers.</p>
+
+<h3>
+<a id="the-cfssljson-utility" class="anchor" href="#the-cfssljson-utility" aria-hidden="true"><span class="octicon octicon-link"></span></a>The cfssljson Utility</h3>
+
+<p>Most of the output from <code>cfssl</code> is in JSON. The <code>cfssljson</code> will take
+this output and split it out into separate key, certificate, CSR, and
+bundle files as appropriate. The tool takes a single flag, <code>-f</code>, that
+specifies the input file, and an argument that specifies the base name for
+the files produced. If the input filename is "-" (which is the default),
+<code>cfssljson</code> reads from standard input. It maps keys in the JSON file to
+filenames in the following way:</p>
+
+<ul>
+<li>if there is a "cert" (or if not, if there's a "certificate") field, the
+file "basename.pem" will be produced.</li>
+<li>if there is a "key" (or if not, if there's a "private_key") field, the
+file "basename-key.pem" will be produced.</li>
+<li>if there is a "csr" (or if not, if there's a "certificate_request") field,
+the file "basename.csr" will be produced.</li>
+<li>if there is a "bundle" field, the file "basename-bundle.pem" will
+be producd.</li>
+</ul>
+
+<h3>
+<a id="additional-documentation" class="anchor" href="#additional-documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Additional Documentation</h3>
+
+<p>Additional documentation can be found in the "doc/" directory:</p>
+
+<ul>
+<li>
+<code>api.txt</code>: documents the API endpoints</li>
+<li>
+<code>bootstrap.txt</code>: a walkthrough from building the package to getting
+up and running</li>
+</ul>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/cloudflare">cloudflare</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
