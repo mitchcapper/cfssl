@@ -95,6 +95,14 @@ func registerHandlers(c cli.Config) error {
 	log.Info("Setting up scaninfo endpoint")
 	http.Handle("/api/v1/cfssl/scaninfo", scan.NewInfoHandler())
 
+	log.Info("Serving static files")
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "cli/serve/static/index.html")
+	})
+	http.HandleFunc("/scan", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "cli/serve/static/scan.html")
+	})
+
 	log.Info("Handler set up complete.")
 	return nil
 }
